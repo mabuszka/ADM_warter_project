@@ -124,3 +124,22 @@ def add_blocks_to_all(axs, date_range, dates_intervals_df, from_col="From", to_c
                    filtered_intervals[to_col], 
                    colors = None if color_col is None else filtered_intervals[color_col].values,
                    **kwargs)
+        
+def get_interval(data, start, end, copy = False):
+    interval = data.loc[start:end, :]
+    return interval.to_numpy(copy = copy)
+
+def pandas_to_numpy_intervals(data_df, intervals_edges,granularity, from_col = "From", to_col = "To", copy_each = False, copy_whole = True):
+    longest_interval = int((intervals_edges.loc[:, to_col] - intervals_edges.loc[:, from_col]).max() / pd.Timedelta(granularity) + 1)
+    num_intervals = len(intervals_edges)
+    from_col_idx = intervals_edges.columns.get_loc(from_col)
+    to_col_idx = intervals_edges.columns.get_loc(to_col)
+    desired_dtype = (data_df.iloc[0,]).to_numpy().dtype
+    intervals_dataset = np.full(fill_value = np.NaN, shape = (num_intervals, longest_interval, data_df.shape[1]), dtype = desired_dtype)
+    for i in range(num_intervals):
+        interval = get_interval(data_df, *intervals_edges.iloc[i,[from_col_idx, to_col_idx]].values, copy = copy_each)
+        interval_len = interval.shape[0]
+        intervals_dataset[i,0:interval_len] = interval
+    if copy_whole:
+        intervals_dataset = intervals_dataset.copy()
+    return intervals_dataset
